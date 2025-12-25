@@ -1,14 +1,18 @@
 import { Link } from 'wouter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Factory, Warehouse, ArrowRight } from 'lucide-react';
+import { Building2, ArrowRight } from 'lucide-react';
 import { buildingTemplates, TemplateType } from '@shared/schema';
 import { useConfiguratorStore } from '@/lib/store';
 
-const templateIcons: Record<TemplateType, typeof Building2> = {
-  single_slope: Factory,
-  rigid_frame: Building2,
-  leans_to: Warehouse,
+import singleSlopeImg from '@assets/generated_images/single_slope_steel_building.png';
+import rigidFrameImg from '@assets/generated_images/rigid_frame_gabled_building.png';
+import leanToImg from '@assets/generated_images/building_with_lean-to_additions.png';
+
+const templateImages: Record<TemplateType, string> = {
+  single_slope: singleSlopeImg,
+  rigid_frame: rigidFrameImg,
+  leans_to: leanToImg,
 };
 
 export default function TemplatesPage() {
@@ -50,7 +54,7 @@ export default function TemplatesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {buildingTemplates.map((template) => {
-            const Icon = templateIcons[template.type];
+            const imageUrl = templateImages[template.type];
             return (
               <Card 
                 key={template.id} 
@@ -58,11 +62,13 @@ export default function TemplatesPage() {
                 data-testid={`card-template-${template.id}`}
               >
                 <CardHeader className="pb-4">
-                  <div className="w-full aspect-video bg-muted rounded-md mb-4 flex items-center justify-center overflow-hidden">
-                    <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                      <Icon className="w-20 h-20 text-muted-foreground/40" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
-                    </div>
+                  <div className="w-full aspect-video bg-muted rounded-md mb-4 overflow-hidden">
+                    <img 
+                      src={imageUrl} 
+                      alt={template.name}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      data-testid={`img-template-${template.id}`}
+                    />
                   </div>
                   <CardTitle className="text-lg">{template.name}</CardTitle>
                   <CardDescription className="text-sm">

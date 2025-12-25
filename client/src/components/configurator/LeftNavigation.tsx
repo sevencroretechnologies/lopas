@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   Accordion,
   AccordionContent,
@@ -18,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ColorPicker } from './ColorPicker';
 import { useConfiguratorStore } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 import { 
   buildingTemplates, 
   frameTypes, 
@@ -27,6 +29,8 @@ import {
   buildingSectors,
   buildingApplications,
   openingTypes,
+  accessoryTypes,
+  generateId,
 } from '@shared/schema';
 import { 
   Building2, 
@@ -37,6 +41,9 @@ import {
   Palette, 
   FileText,
   Send,
+  Trash2,
+  Plus,
+  Loader2,
 } from 'lucide-react';
 
 const panels = [
@@ -59,7 +66,41 @@ export function LeftNavigation() {
     updateColors,
     updateFrameType,
     updateCrane,
+    removeOpening,
+    addAccessory,
+    removeAccessory,
   } = useConfiguratorStore();
+  
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quoteData, setQuoteData] = useState({
+    sector: 'Industrial',
+    application: 'Plants/Factories',
+    year: '2025',
+    referral: '',
+    notes: '',
+  });
+
+  const handleSubmitQuote = async () => {
+    setIsSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast({
+      title: "Inquiry Submitted",
+      description: "Thank you! Our team will contact you within 24-48 hours.",
+    });
+    setIsSubmitting(false);
+    setQuoteData({ sector: 'Industrial', application: 'Plants/Factories', year: '2025', referral: '', notes: '' });
+  };
+
+  const handleAddAccessory = (type: typeof accessoryTypes[number]) => {
+    addAccessory({
+      id: generateId(),
+      type,
+      position: { x: 0, y: 0, z: 0 },
+      color: buildingConfig?.colors.accessories || 'RAL 9010',
+    });
+    toast({ title: "Accessory Added", description: `${type.replace('_', ' ')} has been added.` });
+  };
 
   if (!buildingConfig) return null;
 
@@ -337,31 +378,53 @@ export function LeftNavigation() {
                 />
 
                 <div className="border-t pt-4">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Click the (+) buttons on building walls in the 3D viewport to add openings.
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <h5 className="text-xs font-medium">Available Opening Types:</h5>
-                    <div className="flex flex-wrap gap-1">
-                      {openingTypes.map((type) => (
-                        <span 
-                          key={type} 
-                          className="text-xs bg-muted px-2 py-1 rounded capitalize"
-                        >
-                          {type.replace('_', ' ')}
-                        </span>
-                      ))}
-                    </div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                    Add Openings by Wall
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {(['front', 'back', 'left', 'right'] as const).map((wall) => (
+                      <Button
+                        key={wall}
+                        size="sm"
+                        variant="outline"
+                        className="capitalize text-xs"
+                        onClick={() => {
+                          const event = new CustomEvent('openAddOpeningDialog', { detail: { wall } });
+                          window.dispatchEvent(event);
+                        }}
+                        data-testid={`button-add-opening-${wall}-panel`}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        {wall} Wall
+                      </Button>
+                    ))}
                   </div>
+                  
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Or click (+) buttons on walls in the 3D viewport.
+                  </p>
 
                   {buildingConfig.openings.length > 0 && (
                     <div className="mt-4 space-y-2">
                       <h5 className="text-xs font-medium">Current Openings ({buildingConfig.openings.length}):</h5>
                       {buildingConfig.openings.map((opening) => (
-                        <div key={opening.id} className="text-xs bg-muted p-2 rounded flex justify-between">
-                          <span className="capitalize">{opening.type.replace('_', ' ')}</span>
-                          <span className="text-muted-foreground">{opening.wall} wall</span>
+                        <div key={opening.id} className="text-xs bg-muted p-2 rounded flex items-center justify-between gap-2" data-testid={`opening-item-${opening.id}`}>
+                          <div className="flex-1 min-w-0">
+                            <span className="capitalize font-medium">{opening.type.replace('_', ' ')}</span>
+                            <span className="text-muted-foreground ml-2">({opening.wall})</span>
+                            <div className="text-muted-foreground text-[10px]">
+                              {opening.dimensions.width}m x {opening.dimensions.height}m
+                            </div>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => removeOpening(opening.id)}
+                            data-testid={`button-delete-opening-${opening.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -419,6 +482,47 @@ export function LeftNavigation() {
                     />
                     <p className="text-xs text-muted-foreground">Set to 0 for no crane</p>
                   </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                    Add Accessories
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {accessoryTypes.map((type) => (
+                      <Button
+                        key={type}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddAccessory(type)}
+                        className="capitalize text-xs"
+                        data-testid={`button-add-accessory-${type}`}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        {type.replace('_', ' ')}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {buildingConfig.accessories.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <h5 className="text-xs font-medium">Current Accessories ({buildingConfig.accessories.length}):</h5>
+                      {buildingConfig.accessories.map((acc) => (
+                        <div key={acc.id} className="text-xs bg-muted p-2 rounded flex items-center justify-between gap-2" data-testid={`accessory-item-${acc.id}`}>
+                          <span className="capitalize">{acc.type.replace('_', ' ')}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => removeAccessory(acc.id)}
+                            data-testid={`button-delete-accessory-${acc.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </AccordionContent>
@@ -481,7 +585,7 @@ export function LeftNavigation() {
 
                 <div className="space-y-1">
                   <Label className="text-sm">Building Sector</Label>
-                  <Select defaultValue="Industrial">
+                  <Select value={quoteData.sector} onValueChange={(v) => setQuoteData(d => ({ ...d, sector: v }))}>
                     <SelectTrigger className="h-10" data-testid="select-sector">
                       <SelectValue />
                     </SelectTrigger>
@@ -495,7 +599,7 @@ export function LeftNavigation() {
 
                 <div className="space-y-1">
                   <Label className="text-sm">Building Application</Label>
-                  <Select defaultValue="Plants/Factories">
+                  <Select value={quoteData.application} onValueChange={(v) => setQuoteData(d => ({ ...d, application: v }))}>
                     <SelectTrigger className="h-10" data-testid="select-application">
                       <SelectValue />
                     </SelectTrigger>
@@ -509,7 +613,7 @@ export function LeftNavigation() {
 
                 <div className="space-y-1">
                   <Label className="text-sm">Realization Year</Label>
-                  <Select defaultValue="2025">
+                  <Select value={quoteData.year} onValueChange={(v) => setQuoteData(d => ({ ...d, year: v }))}>
                     <SelectTrigger className="h-10" data-testid="select-year">
                       <SelectValue />
                     </SelectTrigger>
@@ -523,7 +627,7 @@ export function LeftNavigation() {
 
                 <div className="space-y-1">
                   <Label className="text-sm">How did you find us?</Label>
-                  <Select>
+                  <Select value={quoteData.referral} onValueChange={(v) => setQuoteData(d => ({ ...d, referral: v }))}>
                     <SelectTrigger className="h-10" data-testid="select-referral">
                       <SelectValue placeholder="Choose option" />
                     </SelectTrigger>
@@ -542,13 +646,24 @@ export function LeftNavigation() {
                   <Textarea 
                     placeholder="Enter any additional requirements..."
                     className="resize-none min-h-[80px]"
+                    value={quoteData.notes}
+                    onChange={(e) => setQuoteData(d => ({ ...d, notes: e.target.value }))}
                     data-testid="textarea-notes"
                   />
                 </div>
 
-                <Button className="w-full gap-2" data-testid="button-send-inquiry">
-                  <Send className="w-4 h-4" />
-                  Send Inquiry
+                <Button 
+                  className="w-full gap-2 bg-[#F7941D] hover:bg-[#e8850f]" 
+                  onClick={handleSubmitQuote}
+                  disabled={isSubmitting}
+                  data-testid="button-send-inquiry"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  {isSubmitting ? 'Sending...' : 'Send Inquiry'}
                 </Button>
               </div>
             </AccordionContent>

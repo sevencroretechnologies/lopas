@@ -12,8 +12,9 @@ import {
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { useConfiguratorStore } from '@/lib/store';
-import { RAL_COLORS } from '@shared/schema';
+import { RAL_COLORS, WallPosition, Opening } from '@shared/schema';
 import { Box } from 'lucide-react';
+import { AddOpeningDialog } from './AddOpeningDialog';
 
 function checkWebGLSupport(): boolean {
   if (typeof window === 'undefined') return false;
@@ -65,7 +66,11 @@ function parseSlopeToAngle(slope: string): number {
   return 0.1;
 }
 
-function Building() {
+interface BuildingProps {
+  onAddOpening?: (wall: WallPosition) => void;
+}
+
+function Building({ onAddOpening }: BuildingProps) {
   const { buildingConfig, visualization, viewMode } = useConfiguratorStore();
   const groupRef = useRef<THREE.Group>(null);
   
@@ -230,8 +235,9 @@ function Building() {
           {/* Front Wall Button */}
           <Html position={[0, height / 2, length / 2 + 0.2]} center>
             <button 
-              className="w-8 h-8 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center text-lg font-bold shadow-lg hover:bg-primary hover:scale-110 transition-all"
+              className="w-8 h-8 rounded-full bg-[#F7941D] text-white flex items-center justify-center text-lg font-bold shadow-lg hover:bg-[#e8850f] hover:scale-110 transition-all"
               data-testid="button-add-opening-front"
+              onClick={() => onAddOpening?.('front')}
             >
               +
             </button>
@@ -240,8 +246,9 @@ function Building() {
           {/* Back Wall Button */}
           <Html position={[0, height / 2, -length / 2 - 0.2]} center>
             <button 
-              className="w-8 h-8 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center text-lg font-bold shadow-lg hover:bg-primary hover:scale-110 transition-all"
+              className="w-8 h-8 rounded-full bg-[#F7941D] text-white flex items-center justify-center text-lg font-bold shadow-lg hover:bg-[#e8850f] hover:scale-110 transition-all"
               data-testid="button-add-opening-back"
+              onClick={() => onAddOpening?.('back')}
             >
               +
             </button>
@@ -250,8 +257,9 @@ function Building() {
           {/* Left Wall Button */}
           <Html position={[-width / 2 - 0.2, height / 2, 0]} center>
             <button 
-              className="w-8 h-8 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center text-lg font-bold shadow-lg hover:bg-primary hover:scale-110 transition-all"
+              className="w-8 h-8 rounded-full bg-[#F7941D] text-white flex items-center justify-center text-lg font-bold shadow-lg hover:bg-[#e8850f] hover:scale-110 transition-all"
               data-testid="button-add-opening-left"
+              onClick={() => onAddOpening?.('left')}
             >
               +
             </button>
@@ -260,14 +268,58 @@ function Building() {
           {/* Right Wall Button */}
           <Html position={[width / 2 + 0.2, height / 2, 0]} center>
             <button 
-              className="w-8 h-8 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center text-lg font-bold shadow-lg hover:bg-primary hover:scale-110 transition-all"
+              className="w-8 h-8 rounded-full bg-[#F7941D] text-white flex items-center justify-center text-lg font-bold shadow-lg hover:bg-[#e8850f] hover:scale-110 transition-all"
               data-testid="button-add-opening-right"
+              onClick={() => onAddOpening?.('right')}
             >
               +
             </button>
           </Html>
         </>
       )}
+
+      {/* Render openings on walls */}
+      {visualization.showOpenings && buildingConfig.openings.map((opening) => {
+        const openingColor = getColorHex(opening.color);
+        let position: [number, number, number] = [0, 0, 0];
+        let rotation: [number, number, number] = [0, 0, 0];
+        
+        switch (opening.wall) {
+          case 'front':
+            position = [opening.position.x, opening.position.y + opening.dimensions.height / 2 + 0.05, length / 2 + 0.06];
+            break;
+          case 'back':
+            position = [opening.position.x, opening.position.y + opening.dimensions.height / 2 + 0.05, -length / 2 - 0.06];
+            break;
+          case 'left':
+            position = [-width / 2 - 0.06, opening.position.y + opening.dimensions.height / 2 + 0.05, opening.position.x];
+            rotation = [0, Math.PI / 2, 0];
+            break;
+          case 'right':
+            position = [width / 2 + 0.06, opening.position.y + opening.dimensions.height / 2 + 0.05, opening.position.x];
+            rotation = [0, Math.PI / 2, 0];
+            break;
+        }
+        
+        return (
+          <group key={opening.id} position={position} rotation={rotation}>
+            <mesh>
+              <boxGeometry args={[opening.dimensions.width, opening.dimensions.height, 0.12]} />
+              <meshStandardMaterial 
+                color={opening.type === 'window' ? '#87CEEB' : openingColor} 
+                transparent={opening.type === 'window'}
+                opacity={opening.type === 'window' ? 0.6 : 1}
+              />
+            </mesh>
+            {opening.type === 'window' && (
+              <mesh position={[0, 0, 0.07]}>
+                <boxGeometry args={[opening.dimensions.width - 0.1, opening.dimensions.height - 0.1, 0.02]} />
+                <meshStandardMaterial color="#B0E0E6" transparent opacity={0.4} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -347,6 +399,27 @@ function ViewportFallback() {
 
 export function Viewport3D() {
   const { buildingConfig } = useConfiguratorStore();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedWall, setSelectedWall] = useState<WallPosition>('front');
+
+  const handleAddOpening = (wall: WallPosition) => {
+    setSelectedWall(wall);
+    setDialogOpen(true);
+  };
+
+  useEffect(() => {
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ wall: WallPosition }>;
+      if (customEvent.detail && customEvent.detail.wall) {
+        setSelectedWall(customEvent.detail.wall);
+        setDialogOpen(true);
+      }
+    };
+    window.addEventListener('openAddOpeningDialog', handleCustomEvent);
+    return () => {
+      window.removeEventListener('openAddOpeningDialog', handleCustomEvent);
+    };
+  }, []);
 
   if (!buildingConfig) {
     return (
@@ -359,7 +432,12 @@ export function Viewport3D() {
   }
 
   if (!WEBGL_SUPPORTED) {
-    return <ViewportFallback />;
+    return (
+      <>
+        <ViewportFallback />
+        <AddOpeningDialog open={dialogOpen} onOpenChange={setDialogOpen} wall={selectedWall} />
+      </>
+    );
   }
 
   return (
@@ -406,7 +484,7 @@ export function Viewport3D() {
         />
 
         {/* Building Model */}
-        <Building />
+        <Building onAddOpening={handleAddOpening} />
 
         {/* Contact Shadows */}
         <ContactShadows
@@ -462,6 +540,9 @@ export function Viewport3D() {
       <div className="absolute top-4 left-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-md border">
         <p>Drag to rotate | Scroll to zoom | Right-click to pan</p>
       </div>
+
+      {/* Add Opening Dialog */}
+      <AddOpeningDialog open={dialogOpen} onOpenChange={setDialogOpen} wall={selectedWall} />
     </div>
   );
 }
