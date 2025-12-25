@@ -1,0 +1,559 @@
+# PEB (Pre-Engineered Building) Configurator - Replit Development Guide
+
+## Overview
+
+This document provides comprehensive specifications for building a PEB (Pre-Engineered Building) Configurator similar to https://configurator.kirbyinternational.com/peb/en/guest. The application allows users to configure industrial steel buildings in 3D, customize dimensions, colors, openings, and accessories, then submit inquiries for quotes.
+
+---
+
+## 1. Application Architecture
+
+### Technology Stack (Original)
+- **Frontend Framework**: Aurelia.js (JavaScript SPA framework)
+- **3D Rendering**: WebGL/Three.js based custom 3D engine
+- **UI Components**: Kendo UI (Telerik)
+- **Styling**: Bootstrap 5.3.3, Custom CSS
+- **Icons**: Font Awesome 5.15.4
+- **Backend**: ASP.NET MVC (based on URL patterns)
+
+### Recommended Stack for Replit
+- **Frontend**: React + TypeScript
+- **3D Rendering**: Three.js or React Three Fiber
+- **UI Components**: shadcn/ui + Tailwind CSS
+- **State Management**: Zustand or Redux Toolkit
+- **Backend**: FastAPI (Python) or Node.js/Express
+
+---
+
+## 2. User Flow
+
+### Entry Point
+1. User lands on Templates page (`/guest`)
+2. User selects a building template
+3. Configurator loads with 3D model
+4. User configures building through menu panels
+5. User submits inquiry for quote
+
+### Building Templates Available
+1. **Single Slope Building** - Mono-pitch roof design
+2. **Rigid Frame Building** - Traditional gabled/double-slope roof
+3. **Building with Leans To** - Multiple connected buildings (advanced)
+
+---
+
+## 3. UI Layout Structure
+
+### Main Layout Components
+
+```
++------------------------------------------------------------------+
+|  HEADER: Logo + Brand Name                    View Controls      |
++--------+----------------------------------------+----------------+
+|        |                                        |                |
+|  LEFT  |                                        |    RIGHT       |
+|  NAV   |         3D VIEWPORT                    |    SIDEBAR     |
+|  MENU  |         (Canvas)                       |    (Toggles)   |
+|        |                                        |                |
+|        |                                        |                |
+|        |                                        |                |
++--------+----------------------------------------+----------------+
+|                    FOOTER (optional)                             |
++------------------------------------------------------------------+
+```
+
+### Left Navigation Menu (7 Sections)
+1. **BUILDING** - Basic dimensions and roof configuration
+2. **BAYS** - Structural bay configuration
+3. **SHEETING** - Wall and roof panel settings
+4. **OPENINGS** - Doors, windows, gates
+5. **ACCESSORY** - Vents, canopies, flashings, crane
+6. **STRUCTURE** - Structural colors and properties
+7. **QUOTE** - Inquiry submission form
+
+### Right Sidebar - Visualization Toggles
+**Visualization Section:**
+- Edges (toggle)
+- Faces (toggle)
+
+**Main Parts Section (toggleable visibility):**
+- Buttons
+- Dimensions
+- Panels
+- Solid walls
+- Openings
+- Frames
+- Purlins
+- Girts
+- Flashing
+- Accessories
+- Base plate
+- Volumes
+- Roads
+- Structural components
+- Decorations
+- Building shape
+- Building extensions
+- Secondary structure
+- Bracing
+
+### Top Right Controls
+- **View Buttons**: 3D, +Y, -Y, +X, -X, -Z (orthographic views)
+- **Undo/Redo** buttons
+- **Help** button
+- **Save/Load** button
+- **Share** button
+
+### 3D Viewport Features
+- Interactive 3D canvas (WebGL)
+- Click and drag to rotate view
+- Scroll to zoom
+- Interactive buttons on building surfaces for adding components
+- Dimension annotations displayed on ground plane
+- View manipulation arrows
+- 3D orientation cube (bottom right)
+
+---
+
+## 4. Configuration Panels - Detailed Specifications
+
+### 4.1 BUILDING Panel
+
+#### Dimensions Section
+| Field | Type | Range | Default | Unit |
+|-------|------|-------|---------|------|
+| Width | Number Input | 6-100 (Rigid Frame) / 6-18 (Single Slope) | 12.00 | m |
+| Frame Type | Dropdown | RF: Rigid frame, etc. | RF: Rigid frame | - |
+| Bays on Length | Text Input | Pattern: N*M (e.g., 4*6) | 4*6 | - |
+| Building Eave Height (left) | Number Input | 3-15 | 4.00 | m |
+
+#### Roof Section
+| Field | Type | Options | Default |
+|-------|------|---------|---------|
+| Roof Type | Dropdown | Single Slope, Double Slope | Varies by template |
+| Roof Orientation | Dropdown | left, right | right (Single Slope only) |
+| Slope | Dropdown | 0.5/10, 1/10, 1.5/10, etc. | 0.5/10 |
+
+#### Interactive Features
+- Buttons on 3D model to add building/roof extensions
+- Buttons on ground to add 3D decorations
+
+---
+
+### 4.2 BAYS Panel
+
+Displays structural frame view with:
+- Steel frames (columns and beams)
+- Purlins (roof secondary members)
+- Girts (wall secondary members)
+- Bay spacing dimensions
+
+---
+
+### 4.3 SHEETING Panel
+
+Shows building with wall and roof panels applied.
+
+**Toggleable Elements:**
+- Panels
+- Solid walls
+- Openings
+- Secondary structure
+- Base plate
+
+---
+
+### 4.4 OPENINGS Panel
+
+#### Opening Colors Section
+| Field | Type | Default |
+|-------|------|---------|
+| Window color | Color Dropdown | Arctic white |
+| Door fill color | Color Dropdown | Arctic white |
+| Sliding doors fill color | Color Dropdown | Arctic white |
+| Roll doors fill color | Color Dropdown | RAL 9006 |
+| Sectional door fill color | Color Dropdown | Arctic white |
+
+#### Interactive Features
+- Buttons on walls to add windows, doors, gates
+- Buttons on roof/ridge for roof openings
+
+---
+
+### 4.5 ACCESSORY Panel
+
+#### Accessory Section
+| Field | Type | Default |
+|-------|------|---------|
+| Accessory color | Color Dropdown | RAL 9010 |
+
+#### Flashing Section
+| Field | Type | Default |
+|-------|------|---------|
+| Flashing color | Color Dropdown | Arctic white |
+
+#### Crane Section
+| Field | Type | Range | Default | Unit |
+|-------|------|-------|---------|------|
+| Crane way capacity | Number Input | 0+ | 0.00 | t (tons) |
+
+#### Interactive Features
+- Buttons on walls to add vents, canopy, reflectors
+
+---
+
+### 4.6 STRUCTURE Panel
+
+#### Color Setup Section
+| Field | Type | Default |
+|-------|------|---------|
+| Base plate | Color Dropdown | RAL 7035 |
+| Color of primary structure | Color Dropdown | RAL 3011 (red) |
+| Color of secondary structure | Color Dropdown | RAL 9007 |
+| Color of secondary timber structure | Color Dropdown | RAL 1002 |
+
+---
+
+### 4.7 QUOTE Panel
+
+#### Send Inquiry Section
+
+**Building Purpose:**
+| Field | Type | Options | Default |
+|-------|------|---------|---------|
+| Building sector | Dropdown | Industrial, Commercial, Agricultural, etc. | Industrial |
+| Building application | Dropdown | Plants/Factories, Warehouses, etc. | Plants/Factories |
+
+**Additional Fields:**
+| Field | Type | Options | Default |
+|-------|------|---------|---------|
+| Building realization year | Dropdown | 2024, 2025, 2026, etc. | 2025 |
+| How did you find us? | Dropdown | Various options | Choose option |
+
+**Action:**
+- "Send inquiry" button to submit configuration
+
+---
+
+## 5. Color System
+
+### RAL Color Palette
+The application uses RAL color codes with visual swatches:
+- RAL 9010 (Pure white)
+- RAL 9006 (White aluminum)
+- RAL 9007 (Grey aluminum)
+- RAL 7035 (Light grey)
+- RAL 3011 (Brown red)
+- RAL 1002 (Sand yellow)
+- Arctic white (custom)
+- And many more...
+
+### Color Dropdown Component
+- Shows color swatch image (22x12px)
+- Displays color name/code
+- Expandable dropdown with full palette
+
+---
+
+## 6. 3D Rendering Requirements
+
+### Scene Components
+1. **Ground Plane** - Gray concrete slab with dimensions
+2. **Building Model** - Parametric 3D geometry
+3. **Dimension Annotations** - Text labels showing measurements
+4. **Interactive Buttons** - Circular buttons on surfaces
+5. **Axis Arrows** - X, Y, Z orientation indicators
+6. **View Cube** - 3D orientation helper (bottom right)
+
+### View Modes
+1. **3D Perspective** - Default isometric view
+2. **+Y View** - Top-down (plan view)
+3. **-Y View** - Bottom-up
+4. **+X View** - Right side elevation
+5. **-X View** - Left side elevation
+6. **-Z View** - Front elevation
+
+### Visualization Modes
+- **Edges** - Wireframe/edge display
+- **Faces** - Solid surface display
+- Can toggle individual component visibility
+
+### Interaction
+- **Rotate**: Click and drag on canvas
+- **Zoom**: Mouse scroll wheel
+- **Pan**: Right-click drag or shift+drag
+- **Select**: Click on interactive buttons
+
+---
+
+## 7. Data Models
+
+### Building Configuration Object
+```typescript
+interface BuildingConfig {
+  id: string;
+  templateType: 'single_slope' | 'rigid_frame' | 'leans_to';
+  
+  dimensions: {
+    width: number;        // meters (6-100)
+    length: number;       // calculated from bays
+    eaveHeight: number;   // meters (3-15)
+    baysPattern: string;  // e.g., "4*6"
+  };
+  
+  roof: {
+    type: 'single_slope' | 'double_slope';
+    orientation?: 'left' | 'right';
+    slope: string;        // e.g., "0.5/10"
+  };
+  
+  frameType: string;      // e.g., "RF"
+  
+  colors: {
+    wallPanels: string;
+    roofPanels: string;
+    primaryStructure: string;
+    secondaryStructure: string;
+    basePlate: string;
+    flashing: string;
+    accessories: string;
+  };
+  
+  openings: Opening[];
+  accessories: Accessory[];
+  
+  crane?: {
+    capacity: number;     // tons
+  };
+}
+
+interface Opening {
+  id: string;
+  type: 'window' | 'door' | 'sliding_door' | 'roll_door' | 'sectional_door';
+  wall: 'front' | 'back' | 'left' | 'right' | 'roof';
+  position: { x: number; y: number };
+  dimensions: { width: number; height: number };
+  color: string;
+}
+
+interface Accessory {
+  id: string;
+  type: 'vent' | 'canopy' | 'reflector' | 'gutter' | 'downspout';
+  position: { x: number; y: number; z: number };
+  color: string;
+}
+
+interface InquiryData {
+  buildingConfig: BuildingConfig;
+  buildingSector: string;
+  buildingApplication: string;
+  realizationYear: number;
+  referralSource: string;
+  contactInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+  };
+}
+```
+
+---
+
+## 8. API Endpoints (Suggested)
+
+### Templates
+- `GET /api/templates` - List available building templates
+- `GET /api/templates/:id` - Get template details
+
+### Configurations
+- `POST /api/configurations` - Create new configuration
+- `GET /api/configurations/:id` - Get configuration by ID
+- `PUT /api/configurations/:id` - Update configuration
+- `DELETE /api/configurations/:id` - Delete configuration
+
+### Colors
+- `GET /api/colors` - Get available color palette
+
+### Inquiries
+- `POST /api/inquiries` - Submit quote inquiry
+
+### Assets
+- `GET /api/thumbnails/:templateId` - Get template thumbnail
+- `GET /api/models/:templateId` - Get 3D model data
+
+---
+
+## 9. Key Features to Implement
+
+### Phase 1 - Core Features
+1. Template selection page
+2. Basic 3D viewport with building model
+3. Building dimensions configuration
+4. View controls (rotate, zoom, pan)
+5. Orthographic view switching
+
+### Phase 2 - Configuration Panels
+1. All 7 menu panels with forms
+2. Color picker dropdowns
+3. Real-time 3D model updates
+4. Dimension annotations
+
+### Phase 3 - Interactive Features
+1. Interactive buttons on 3D model
+2. Add/remove openings
+3. Add/remove accessories
+4. Component visibility toggles
+
+### Phase 4 - Advanced Features
+1. Undo/redo functionality
+2. Save/load configurations
+3. Share configurations (URL-based)
+4. Quote submission form
+5. PDF export (optional)
+
+---
+
+## 10. UI/UX Guidelines
+
+### Design Principles
+- Clean, professional industrial aesthetic
+- High contrast for readability
+- Responsive layout (desktop-first)
+- Intuitive navigation with clear labels
+- Real-time visual feedback
+
+### Color Scheme
+- Primary: Orange (#F7941D - Kirby brand)
+- Background: Light gray (#F5F5F5)
+- Panels: White with subtle shadows
+- Text: Dark gray (#333333)
+- Accents: Blue for active states
+
+### Typography
+- Headers: Sans-serif, bold
+- Body: Sans-serif, regular
+- Measurements: Monospace for precision
+
+### Interactions
+- Hover states on all clickable elements
+- Loading spinners for async operations
+- Toast notifications for actions
+- Tooltips for complex controls
+
+---
+
+## 11. Technical Considerations
+
+### Performance
+- Use instanced geometry for repeated elements
+- Implement level-of-detail (LOD) for complex models
+- Lazy load 3D assets
+- Debounce configuration updates
+
+### Browser Support
+- Chrome, Firefox, Safari, Edge (latest versions)
+- WebGL 2.0 required
+- Minimum screen width: 1024px
+
+### State Management
+- Centralized store for building configuration
+- History stack for undo/redo
+- URL state synchronization for sharing
+
+### 3D Library Recommendations
+- **Three.js** - Most flexible, largest community
+- **React Three Fiber** - React integration
+- **Babylon.js** - Alternative with good tooling
+
+---
+
+## 12. Sample Component Structure (React)
+
+```
+src/
+├── components/
+│   ├── Layout/
+│   │   ├── Header.tsx
+│   │   ├── LeftNav.tsx
+│   │   ├── RightSidebar.tsx
+│   │   └── Footer.tsx
+│   ├── Viewport/
+│   │   ├── Scene.tsx
+│   │   ├── Building.tsx
+│   │   ├── Ground.tsx
+│   │   ├── Dimensions.tsx
+│   │   └── InteractiveButtons.tsx
+│   ├── Panels/
+│   │   ├── BuildingPanel.tsx
+│   │   ├── BaysPanel.tsx
+│   │   ├── SheetingPanel.tsx
+│   │   ├── OpeningsPanel.tsx
+│   │   ├── AccessoryPanel.tsx
+│   │   ├── StructurePanel.tsx
+│   │   └── QuotePanel.tsx
+│   ├── Controls/
+│   │   ├── ViewControls.tsx
+│   │   ├── ColorPicker.tsx
+│   │   ├── NumberInput.tsx
+│   │   └── ToggleButton.tsx
+│   └── Templates/
+│       └── TemplateSelector.tsx
+├── hooks/
+│   ├── useBuilding.ts
+│   ├── useViewport.ts
+│   └── useHistory.ts
+├── store/
+│   └── buildingStore.ts
+├── types/
+│   └── building.ts
+├── utils/
+│   ├── geometry.ts
+│   └── colors.ts
+└── App.tsx
+```
+
+---
+
+## 13. Getting Started on Replit
+
+### Initial Setup
+1. Create a new React + TypeScript project
+2. Install dependencies:
+   ```bash
+   npm install three @react-three/fiber @react-three/drei
+   npm install zustand
+   npm install tailwindcss
+   ```
+
+### First Milestone
+1. Create basic layout with header, nav, viewport, sidebar
+2. Implement simple 3D scene with a box representing building
+3. Add view controls for rotation
+4. Create Building panel with dimension inputs
+
+### Testing
+- Test 3D rendering performance
+- Verify responsive layout
+- Test form inputs and validation
+
+---
+
+## 14. Resources
+
+### Documentation
+- Three.js: https://threejs.org/docs/
+- React Three Fiber: https://docs.pmnd.rs/react-three-fiber
+- Zustand: https://github.com/pmndrs/zustand
+- Tailwind CSS: https://tailwindcss.com/docs
+
+### Inspiration
+- Original: https://configurator.kirbyinternational.com/peb/en/guest
+- Similar: Various 3D product configurators
+
+---
+
+## Summary
+
+This PEB Configurator is a sophisticated 3D building configuration tool that allows users to customize pre-engineered steel buildings. The core challenge is implementing the 3D visualization with real-time updates based on user configuration changes. Start with the basic structure and progressively add features, focusing first on the 3D viewport and building dimensions before moving to more complex features like openings and accessories.
+
+The application follows a clear user flow: select template -> configure dimensions -> customize colors -> add openings/accessories -> submit inquiry. Each step should provide immediate visual feedback in the 3D viewport.
