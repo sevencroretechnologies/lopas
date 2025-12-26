@@ -9,6 +9,7 @@ import {
   GizmoViewcube,
   Environment,
   ContactShadows,
+  Edges,
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { useConfiguratorStore } from '@/lib/store';
@@ -354,25 +355,49 @@ function Building({ onAddOpening }: BuildingProps) {
           {/* Front Wall */}
           <mesh position={[0, height / 2 + 0.05, length / 2]} castShadow receiveShadow>
             <boxGeometry args={[width, height, 0.1]} />
-            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+            <meshStandardMaterial 
+              color={wallColor} 
+              side={THREE.DoubleSide} 
+              transparent={visualization.showEdges}
+              opacity={visualization.showEdges ? 0.4 : 1}
+            />
+            {visualization.showEdges && <Edges color="#333333" threshold={15} />}
           </mesh>
 
           {/* Back Wall */}
           <mesh position={[0, height / 2 + 0.05, -length / 2]} castShadow receiveShadow>
             <boxGeometry args={[width, height, 0.1]} />
-            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+            <meshStandardMaterial 
+              color={wallColor} 
+              side={THREE.DoubleSide}
+              transparent={visualization.showEdges}
+              opacity={visualization.showEdges ? 0.4 : 1}
+            />
+            {visualization.showEdges && <Edges color="#333333" threshold={15} />}
           </mesh>
 
           {/* Left Wall */}
           <mesh position={[-width / 2, height / 2 + 0.05, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.1, height, length]} />
-            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+            <meshStandardMaterial 
+              color={wallColor} 
+              side={THREE.DoubleSide}
+              transparent={visualization.showEdges}
+              opacity={visualization.showEdges ? 0.4 : 1}
+            />
+            {visualization.showEdges && <Edges color="#333333" threshold={15} />}
           </mesh>
 
           {/* Right Wall */}
           <mesh position={[width / 2, height / 2 + 0.05, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.1, height, length]} />
-            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+            <meshStandardMaterial 
+              color={wallColor} 
+              side={THREE.DoubleSide}
+              transparent={visualization.showEdges}
+              opacity={visualization.showEdges ? 0.4 : 1}
+            />
+            {visualization.showEdges && <Edges color="#333333" threshold={15} />}
           </mesh>
         </>
       )}
@@ -389,7 +414,13 @@ function Building({ onAddOpening }: BuildingProps) {
                 castShadow
               >
                 <boxGeometry args={[width / 2 / Math.cos(slopeAngle), 0.08, length]} />
-                <meshStandardMaterial color={roofColor} side={THREE.DoubleSide} />
+                <meshStandardMaterial 
+                  color={roofColor} 
+                  side={THREE.DoubleSide}
+                  transparent={visualization.showEdges}
+                  opacity={visualization.showEdges ? 0.4 : 1}
+                />
+                {visualization.showEdges && <Edges color="#333333" threshold={15} />}
               </mesh>
 
               {/* Right Roof Panel */}
@@ -399,7 +430,13 @@ function Building({ onAddOpening }: BuildingProps) {
                 castShadow
               >
                 <boxGeometry args={[width / 2 / Math.cos(slopeAngle), 0.08, length]} />
-                <meshStandardMaterial color={roofColor} side={THREE.DoubleSide} />
+                <meshStandardMaterial 
+                  color={roofColor} 
+                  side={THREE.DoubleSide}
+                  transparent={visualization.showEdges}
+                  opacity={visualization.showEdges ? 0.4 : 1}
+                />
+                {visualization.showEdges && <Edges color="#333333" threshold={15} />}
               </mesh>
             </>
           ) : (
@@ -410,7 +447,13 @@ function Building({ onAddOpening }: BuildingProps) {
               castShadow
             >
               <boxGeometry args={[width / Math.cos(slopeAngle), 0.08, length]} />
-              <meshStandardMaterial color={roofColor} side={THREE.DoubleSide} />
+              <meshStandardMaterial 
+                color={roofColor} 
+                side={THREE.DoubleSide}
+                transparent={visualization.showEdges}
+                opacity={visualization.showEdges ? 0.4 : 1}
+              />
+              {visualization.showEdges && <Edges color="#333333" threshold={15} />}
             </mesh>
           )}
         </>
