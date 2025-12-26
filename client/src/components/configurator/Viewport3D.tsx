@@ -12,7 +12,7 @@ import {
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { useConfiguratorStore } from '@/lib/store';
-import { RAL_COLORS, WallPosition, Opening } from '@shared/schema';
+import { RAL_COLORS, WallPosition, Opening, LeanTo, Mezzanine, Canopy, Skylight } from '@shared/schema';
 import { Box } from 'lucide-react';
 import { AddOpeningDialog } from './AddOpeningDialog';
 
@@ -66,6 +66,246 @@ function parseSlopeToAngle(slope: string): number {
   return 0.1;
 }
 
+interface LeanToRenderProps {
+  leanTo: LeanTo;
+  parentWidth: number;
+  parentLength: number;
+  parentHeight: number;
+  frameColor: string;
+  visualization: { showPanels: boolean; showFrames: boolean };
+}
+
+function LeanToRenderer({ leanTo, parentWidth, parentLength, parentHeight, frameColor, visualization }: LeanToRenderProps) {
+  const width = leanTo.width;
+  const length = leanTo.length || parentLength;
+  const height = leanTo.eaveHeight;
+  const slopeAngle = parseSlopeToAngle(leanTo.slope);
+  
+  const xOffset = leanTo.attachedTo === 'left' 
+    ? -parentWidth / 2 - width / 2 
+    : parentWidth / 2 + width / 2;
+  
+  const wallColor = getColorHex(leanTo.colors.wallPanels);
+  const roofColor = getColorHex(leanTo.colors.roofPanels);
+  
+  const roofPeakHeight = height + width * Math.tan(slopeAngle);
+
+  return (
+    <group position={[xOffset, 0, 0]}>
+      {visualization.showPanels && (
+        <>
+          {/* Front Wall */}
+          <mesh position={[0, height / 2 + 0.05, length / 2]} castShadow>
+            <boxGeometry args={[width, height, 0.08]} />
+            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+          </mesh>
+
+          {/* Back Wall */}
+          <mesh position={[0, height / 2 + 0.05, -length / 2]} castShadow>
+            <boxGeometry args={[width, height, 0.08]} />
+            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+          </mesh>
+
+          {/* Outer Wall */}
+          <mesh 
+            position={[leanTo.attachedTo === 'left' ? -width / 2 : width / 2, height / 2 + 0.05, 0]} 
+            castShadow
+          >
+            <boxGeometry args={[0.08, height, length]} />
+            <meshStandardMaterial color={wallColor} side={THREE.DoubleSide} />
+          </mesh>
+
+          {/* Roof - Single slope towards outer wall */}
+          <mesh 
+            position={[0, height + (roofPeakHeight - height) / 2, 0]}
+            rotation={[0, 0, leanTo.attachedTo === 'left' ? slopeAngle : -slopeAngle]}
+            castShadow
+          >
+            <boxGeometry args={[width / Math.cos(slopeAngle), 0.06, length]} />
+            <meshStandardMaterial color={roofColor} side={THREE.DoubleSide} />
+          </mesh>
+        </>
+      )}
+
+      {visualization.showFrames && (
+        <>
+          {/* Corner columns */}
+          {[
+            [leanTo.attachedTo === 'left' ? -width / 2 + 0.1 : width / 2 - 0.1, -length / 2 + 0.1],
+            [leanTo.attachedTo === 'left' ? -width / 2 + 0.1 : width / 2 - 0.1, length / 2 - 0.1],
+          ].map((pos, i) => (
+            <mesh key={`leanto-col-${i}`} position={[pos[0], height / 2 + 0.05, pos[1]]} castShadow>
+              <boxGeometry args={[0.15, height, 0.15]} />
+              <meshStandardMaterial color={frameColor} />
+            </mesh>
+          ))}
+        </>
+      )}
+    </group>
+  );
+}
+
+interface MezzanineRenderProps {
+  mezzanine: Mezzanine;
+  frameColor: string;
+}
+
+function MezzanineRenderer({ mezzanine, frameColor }: MezzanineRenderProps) {
+  const { position, dimensions, height, hasRailing } = mezzanine;
+  
+  return (
+    <group position={[position.x, height, position.z]}>
+      {/* Floor deck */}
+      <mesh castShadow>
+        <boxGeometry args={[dimensions.width, 0.15, dimensions.length]} />
+        <meshStandardMaterial color="#A0A0A0" />
+      </mesh>
+
+      {/* Support columns */}
+      {[
+        [-dimensions.width / 2 + 0.15, -dimensions.length / 2 + 0.15],
+        [dimensions.width / 2 - 0.15, -dimensions.length / 2 + 0.15],
+        [-dimensions.width / 2 + 0.15, dimensions.length / 2 - 0.15],
+        [dimensions.width / 2 - 0.15, dimensions.length / 2 - 0.15],
+      ].map((pos, i) => (
+        <mesh key={`mezz-col-${i}`} position={[pos[0], -height / 2, pos[1]]} castShadow>
+          <boxGeometry args={[0.2, height, 0.2]} />
+          <meshStandardMaterial color={frameColor} />
+        </mesh>
+      ))}
+
+      {/* Railings */}
+      {hasRailing && (
+        <>
+          {/* Front railing */}
+          <mesh position={[0, 0.55, dimensions.length / 2 - 0.05]}>
+            <boxGeometry args={[dimensions.width, 0.05, 0.05]} />
+            <meshStandardMaterial color={frameColor} />
+          </mesh>
+          {/* Back railing */}
+          <mesh position={[0, 0.55, -dimensions.length / 2 + 0.05]}>
+            <boxGeometry args={[dimensions.width, 0.05, 0.05]} />
+            <meshStandardMaterial color={frameColor} />
+          </mesh>
+          {/* Side railings */}
+          <mesh position={[-dimensions.width / 2 + 0.05, 0.55, 0]}>
+            <boxGeometry args={[0.05, 0.05, dimensions.length]} />
+            <meshStandardMaterial color={frameColor} />
+          </mesh>
+          <mesh position={[dimensions.width / 2 - 0.05, 0.55, 0]}>
+            <boxGeometry args={[0.05, 0.05, dimensions.length]} />
+            <meshStandardMaterial color={frameColor} />
+          </mesh>
+
+          {/* Railing posts */}
+          {[
+            [-dimensions.width / 2 + 0.05, -dimensions.length / 2 + 0.05],
+            [dimensions.width / 2 - 0.05, -dimensions.length / 2 + 0.05],
+            [-dimensions.width / 2 + 0.05, dimensions.length / 2 - 0.05],
+            [dimensions.width / 2 - 0.05, dimensions.length / 2 - 0.05],
+          ].map((pos, i) => (
+            <mesh key={`railing-post-${i}`} position={[pos[0], 0.3, pos[1]]}>
+              <boxGeometry args={[0.05, 0.5, 0.05]} />
+              <meshStandardMaterial color={frameColor} />
+            </mesh>
+          ))}
+        </>
+      )}
+    </group>
+  );
+}
+
+interface CanopyRenderProps {
+  canopy: Canopy;
+  buildingWidth: number;
+  buildingLength: number;
+  buildingHeight: number;
+}
+
+function CanopyRenderer({ canopy, buildingWidth, buildingLength, buildingHeight }: CanopyRenderProps) {
+  const { wall, dimensions } = canopy;
+  const color = getColorHex(canopy.color);
+  
+  let position: [number, number, number] = [0, 0, 0];
+  let rotation: [number, number, number] = [0, 0, 0];
+  let size: [number, number, number] = [0, 0, 0];
+  
+  switch (wall) {
+    case 'front':
+      position = [canopy.position.x, buildingHeight - 0.5, buildingLength / 2 + dimensions.projection / 2];
+      size = [dimensions.width, 0.08, dimensions.projection];
+      rotation = [-0.1, 0, 0];
+      break;
+    case 'back':
+      position = [canopy.position.x, buildingHeight - 0.5, -buildingLength / 2 - dimensions.projection / 2];
+      size = [dimensions.width, 0.08, dimensions.projection];
+      rotation = [0.1, 0, 0];
+      break;
+    case 'left':
+      position = [-buildingWidth / 2 - dimensions.projection / 2, buildingHeight - 0.5, canopy.position.x];
+      size = [dimensions.projection, 0.08, dimensions.width];
+      rotation = [0, 0, -0.1];
+      break;
+    case 'right':
+      position = [buildingWidth / 2 + dimensions.projection / 2, buildingHeight - 0.5, canopy.position.x];
+      size = [dimensions.projection, 0.08, dimensions.width];
+      rotation = [0, 0, 0.1];
+      break;
+  }
+
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh castShadow>
+        <boxGeometry args={size} />
+        <meshStandardMaterial color={color} side={THREE.DoubleSide} />
+      </mesh>
+      
+      {canopy.hasSupportColumns && (
+        <>
+          {/* Support columns */}
+          {wall === 'front' || wall === 'back' ? (
+            <>
+              <mesh position={[-dimensions.width / 2 + 0.1, -buildingHeight / 3, 0]}>
+                <boxGeometry args={[0.1, buildingHeight * 0.6, 0.1]} />
+                <meshStandardMaterial color="#666666" />
+              </mesh>
+              <mesh position={[dimensions.width / 2 - 0.1, -buildingHeight / 3, 0]}>
+                <boxGeometry args={[0.1, buildingHeight * 0.6, 0.1]} />
+                <meshStandardMaterial color="#666666" />
+              </mesh>
+            </>
+          ) : (
+            <>
+              <mesh position={[0, -buildingHeight / 3, -dimensions.width / 2 + 0.1]}>
+                <boxGeometry args={[0.1, buildingHeight * 0.6, 0.1]} />
+                <meshStandardMaterial color="#666666" />
+              </mesh>
+              <mesh position={[0, -buildingHeight / 3, dimensions.width / 2 - 0.1]}>
+                <boxGeometry args={[0.1, buildingHeight * 0.6, 0.1]} />
+                <meshStandardMaterial color="#666666" />
+              </mesh>
+            </>
+          )}
+        </>
+      )}
+    </group>
+  );
+}
+
+interface SkylightRenderProps {
+  skylight: Skylight;
+  roofHeight: number;
+}
+
+function SkylightRenderer({ skylight, roofHeight }: SkylightRenderProps) {
+  return (
+    <mesh position={[skylight.position.x, roofHeight + 0.1, skylight.position.y]} castShadow>
+      <boxGeometry args={[skylight.dimensions.width, 0.1, skylight.dimensions.length]} />
+      <meshStandardMaterial color="#87CEEB" transparent opacity={0.7} />
+    </mesh>
+  );
+}
+
 interface BuildingProps {
   onAddOpening?: (wall: WallPosition) => void;
 }
@@ -76,7 +316,7 @@ function Building({ onAddOpening }: BuildingProps) {
   
   if (!buildingConfig) return null;
 
-  const { dimensions, roof, colors } = buildingConfig;
+  const { dimensions, roof, colors, bays } = buildingConfig;
   const width = dimensions.width;
   const length = dimensions.length;
   const height = dimensions.eaveHeight;
@@ -89,6 +329,7 @@ function Building({ onAddOpening }: BuildingProps) {
   const wallColor = getColorHex(colors.wallPanels);
   const roofColor = getColorHex(colors.roofPanels);
   const frameColor = getColorHex(colors.primaryStructure);
+  const secondaryFrameColor = getColorHex(colors.secondaryStructure);
   const basePlateColor = getColorHex(colors.basePlate);
 
   return (
@@ -175,7 +416,7 @@ function Building({ onAddOpening }: BuildingProps) {
         </>
       )}
 
-      {/* Frames */}
+      {/* Primary Frames */}
       {visualization.showFrames && (
         <>
           {/* Corner Columns */}
@@ -191,7 +432,29 @@ function Building({ onAddOpening }: BuildingProps) {
             </mesh>
           ))}
 
-          {/* Horizontal Beams */}
+          {/* Interior Frame Columns - Based on bays */}
+          {bays && bays.length > 1 && (() => {
+            let zPos = -length / 2;
+            const columns: JSX.Element[] = [];
+            
+            bays.slice(0, -1).forEach((bay, i) => {
+              zPos += bay.width;
+              columns.push(
+                <mesh key={`int-col-left-${i}`} position={[-width / 2 + 0.1, height / 2 + 0.05, zPos]} castShadow>
+                  <boxGeometry args={[0.2, height, 0.2]} />
+                  <meshStandardMaterial color={frameColor} />
+                </mesh>,
+                <mesh key={`int-col-right-${i}`} position={[width / 2 - 0.1, height / 2 + 0.05, zPos]} castShadow>
+                  <boxGeometry args={[0.2, height, 0.2]} />
+                  <meshStandardMaterial color={frameColor} />
+                </mesh>
+              );
+            });
+            
+            return columns;
+          })()}
+
+          {/* Horizontal Beams (Rafters) */}
           <mesh position={[0, height + 0.1, -length / 2 + 0.1]} castShadow>
             <boxGeometry args={[width, 0.2, 0.15]} />
             <meshStandardMaterial color={frameColor} />
@@ -200,6 +463,42 @@ function Building({ onAddOpening }: BuildingProps) {
             <boxGeometry args={[width, 0.2, 0.15]} />
             <meshStandardMaterial color={frameColor} />
           </mesh>
+        </>
+      )}
+
+      {/* Purlins (Secondary roof structure) */}
+      {visualization.showPurlins && (
+        <>
+          {Array.from({ length: Math.floor(length / 1.5) }).map((_, i) => (
+            <mesh key={`purlin-${i}`} position={[0, peakHeight - 0.1, -length / 2 + (i + 1) * 1.5]} castShadow>
+              <boxGeometry args={[width - 0.3, 0.08, 0.08]} />
+              <meshStandardMaterial color={secondaryFrameColor} />
+            </mesh>
+          ))}
+        </>
+      )}
+
+      {/* Girts (Secondary wall structure) */}
+      {visualization.showGirts && (
+        <>
+          {/* Front and back wall girts */}
+          {[length / 2 - 0.05, -length / 2 + 0.05].map((zPos, wallIdx) => (
+            Array.from({ length: Math.floor(height / 1.5) }).map((_, i) => (
+              <mesh key={`girt-fb-${wallIdx}-${i}`} position={[0, (i + 1) * 1.5, zPos]} castShadow>
+                <boxGeometry args={[width - 0.3, 0.06, 0.06]} />
+                <meshStandardMaterial color={secondaryFrameColor} />
+              </mesh>
+            ))
+          ))}
+          {/* Side wall girts */}
+          {[-width / 2 + 0.05, width / 2 - 0.05].map((xPos, wallIdx) => (
+            Array.from({ length: Math.floor(height / 1.5) }).map((_, i) => (
+              <mesh key={`girt-side-${wallIdx}-${i}`} position={[xPos, (i + 1) * 1.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
+                <boxGeometry args={[length - 0.3, 0.06, 0.06]} />
+                <meshStandardMaterial color={secondaryFrameColor} />
+              </mesh>
+            ))
+          ))}
         </>
       )}
 
@@ -301,25 +600,120 @@ function Building({ onAddOpening }: BuildingProps) {
             break;
         }
         
+        const isWindow = opening.type === 'window';
+        const isGlass = isWindow || opening.type === 'sliding_door';
+        
         return (
           <group key={opening.id} position={position} rotation={rotation}>
             <mesh>
               <boxGeometry args={[opening.dimensions.width, opening.dimensions.height, 0.12]} />
               <meshStandardMaterial 
-                color={opening.type === 'window' ? '#87CEEB' : openingColor} 
-                transparent={opening.type === 'window'}
-                opacity={opening.type === 'window' ? 0.6 : 1}
+                color={isGlass ? '#87CEEB' : openingColor} 
+                transparent={isGlass}
+                opacity={isGlass ? 0.6 : 1}
               />
             </mesh>
-            {opening.type === 'window' && (
+            {isWindow && (
               <mesh position={[0, 0, 0.07]}>
                 <boxGeometry args={[opening.dimensions.width - 0.1, opening.dimensions.height - 0.1, 0.02]} />
                 <meshStandardMaterial color="#B0E0E6" transparent opacity={0.4} />
               </mesh>
             )}
+            {/* Door Frame */}
+            {opening.hasFrame && !isWindow && (
+              <>
+                <mesh position={[-opening.dimensions.width / 2 - 0.05, 0, 0]}>
+                  <boxGeometry args={[0.1, opening.dimensions.height + 0.1, 0.15]} />
+                  <meshStandardMaterial color={opening.frameColor ? getColorHex(opening.frameColor) : frameColor} />
+                </mesh>
+                <mesh position={[opening.dimensions.width / 2 + 0.05, 0, 0]}>
+                  <boxGeometry args={[0.1, opening.dimensions.height + 0.1, 0.15]} />
+                  <meshStandardMaterial color={opening.frameColor ? getColorHex(opening.frameColor) : frameColor} />
+                </mesh>
+                <mesh position={[0, opening.dimensions.height / 2 + 0.05, 0]}>
+                  <boxGeometry args={[opening.dimensions.width + 0.2, 0.1, 0.15]} />
+                  <meshStandardMaterial color={opening.frameColor ? getColorHex(opening.frameColor) : frameColor} />
+                </mesh>
+              </>
+            )}
           </group>
         );
       })}
+
+      {/* Render Lean-Tos */}
+      {buildingConfig.leanTos && buildingConfig.leanTos.map((leanTo) => (
+        <LeanToRenderer
+          key={leanTo.id}
+          leanTo={leanTo}
+          parentWidth={width}
+          parentLength={length}
+          parentHeight={height}
+          frameColor={frameColor}
+          visualization={visualization}
+        />
+      ))}
+
+      {/* Render Mezzanines */}
+      {buildingConfig.mezzanines && buildingConfig.mezzanines.map((mezzanine) => (
+        <MezzanineRenderer
+          key={mezzanine.id}
+          mezzanine={mezzanine}
+          frameColor={frameColor}
+        />
+      ))}
+
+      {/* Render Canopies */}
+      {buildingConfig.canopies && buildingConfig.canopies.map((canopy) => (
+        <CanopyRenderer
+          key={canopy.id}
+          canopy={canopy}
+          buildingWidth={width}
+          buildingLength={length}
+          buildingHeight={height}
+        />
+      ))}
+
+      {/* Render Skylights */}
+      {buildingConfig.skylights && buildingConfig.skylights.map((skylight) => (
+        <SkylightRenderer
+          key={skylight.id}
+          skylight={skylight}
+          roofHeight={peakHeight}
+        />
+      ))}
+
+      {/* Render Crane (if exists) */}
+      {buildingConfig.crane && buildingConfig.crane.type !== 'none' && (
+        <group>
+          {/* Crane runway beams */}
+          <mesh position={[-width / 2 + 1, height - 0.5, 0]} castShadow>
+            <boxGeometry args={[0.3, 0.4, length - 2]} />
+            <meshStandardMaterial color="#FFD700" />
+          </mesh>
+          <mesh position={[width / 2 - 1, height - 0.5, 0]} castShadow>
+            <boxGeometry args={[0.3, 0.4, length - 2]} />
+            <meshStandardMaterial color="#FFD700" />
+          </mesh>
+          
+          {/* Crane bridge */}
+          <mesh position={[0, height - 0.3, 0]} castShadow>
+            <boxGeometry args={[width - 2.5, 0.5, 0.8]} />
+            <meshStandardMaterial color="#FF8C00" />
+          </mesh>
+          
+          {/* Hoist trolley */}
+          <mesh position={[0, height - 0.8, 0]} castShadow>
+            <boxGeometry args={[1, 0.4, 0.6]} />
+            <meshStandardMaterial color="#FF6600" />
+          </mesh>
+          
+          {/* Hook */}
+          <mesh position={[0, (buildingConfig.crane.hookHeight || height - 2), 0]} castShadow>
+            <boxGeometry args={[0.2, 0.3, 0.2]} />
+            <meshStandardMaterial color="#333333" />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }

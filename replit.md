@@ -38,14 +38,40 @@ Preferred communication style: Simple, everyday language.
 - **Component Structure**: UI components in `components/ui/`, feature components in `components/configurator/`
 - **Desktop-First Layout**: Fixed-width sidebars (280px left, 320px right) with flexible center viewport
 
+### Multi-Building Project Architecture
+- **Project Container**: Project schema holds an array of BuildingConfig objects
+- **Building Selection**: Users can add, duplicate, delete, and switch between buildings
+- **State Sync**: Zustand store maintains `project.buildings` array and `buildingConfig` for currently selected building
+
 ### Building Configuration Model
 The core data model includes:
 - Building dimensions (width, length, eave height)
+- Bay configurations (customizable bay widths and count)
 - Roof configuration (type, slope, orientation)
 - RAL color selections for panels and structure
-- Openings (doors, windows, louvers)
+- Wall and roof panel configurations (type, profile, thickness)
+- Wall and roof insulation (type, R-value, liner options)
+- Openings (9 types: window, door, sliding door, roll door, sectional door, personnel door, emergency exit, louver, framed opening)
+- Lean-to attachments (left/right side extensions)
+- Mezzanine floors with railings and stairs
+- Canopies with support columns
+- Skylights (single, continuous, ridge types)
+- Ventilators (ridge vents, turbine vents, wall louvers, powered exhaust)
+- Crane systems (overhead bridge, monorail, jib, gantry)
 - Accessories and structural options
-- Crane specifications
+
+### Configuration Panels (11 Total)
+1. Building - Basic dimensions, roof type, frame configuration
+2. Bays - Bay pattern and individual bay widths
+3. Sheeting - Wall and roof panel types and profiles
+4. Insulation - Wall and roof insulation options
+5. Openings - Doors, windows, louvers with position/size
+6. Mezzanine - Interior floor platforms with railings
+7. Skylights - Roof skylights for natural lighting
+8. Ventilation - Vents and air circulation systems
+9. Accessory - Canopies and other attachments
+10. Structure - Lean-to extensions
+11. Quote - Project inquiry form
 
 ## External Dependencies
 
@@ -71,3 +97,31 @@ The core data model includes:
 ### Session Management
 - **express-session**: Server-side session handling
 - **connect-pg-simple**: PostgreSQL session store
+
+## Recent Changes (Dec 2024)
+
+### Multi-Building Support
+- Added Project container to hold multiple buildings
+- Building list UI in left navigation header with add/duplicate/delete controls
+- Building selection and switching functionality
+
+### Enhanced Schema Types (20+ new types)
+- Bay, InsulationConfig, PanelConfig, Mezzanine, CraneConfig
+- Skylight, Ventilator, Canopy, LeanTo
+- Enhanced Opening type with 9 types and door swing directions
+
+### 3D Viewport Enhancements
+- Lean-to structures rendering
+- Mezzanine floors with railings and support columns
+- Canopies with support columns
+- Skylights on roof
+- Crane runway beams, bridge, and hoist
+- Purlins and girts (secondary structural elements)
+- Interior frame columns based on bay configuration
+
+### Store Actions (60+ total)
+- Bay management (add, remove, update width)
+- Panel and insulation configuration
+- Lean-to, mezzanine, canopy, skylight, ventilator CRUD
+- Crane configuration
+- Multi-building operations

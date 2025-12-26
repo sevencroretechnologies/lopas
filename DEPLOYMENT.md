@@ -1,190 +1,339 @@
-# Deployment Guide - Netlify
+# Deploying PEB 3D Configurator to Netlify and Vercel
 
-This guide will help you deploy the PEB 3D Building Configurator to Netlify.
+This guide explains how to deploy the PEB 3D Building Configurator to Netlify or Vercel. Both platforms require converting the Express backend to serverless functions.
 
-## Prerequisites
+## Important Notes
 
-- A [Netlify account](https://app.netlify.com/signup) (free tier works fine)
-- Git repository hosted on GitHub, GitLab, or Bitbucket
-- Node.js 20+ installed locally (for testing the build)
-
-## Deployment Options
-
-### Option 1: Deploy via Netlify UI (Recommended for first-time deployment)
-
-1. **Push your code to a Git repository** (GitHub, GitLab, or Bitbucket)
-
-2. **Log in to Netlify**
-   - Go to [https://app.netlify.com](https://app.netlify.com)
-   - Sign in or create an account
-
-3. **Create a new site**
-   - Click "Add new site" → "Import an existing project"
-   - Choose your Git provider (GitHub/GitLab/Bitbucket)
-   - Authorize Netlify to access your repositories
-   - Select the `Kirby-Clone` repository
-
-4. **Configure build settings**
-   Netlify should auto-detect the settings from `netlify.toml`, but verify:
-   - **Base directory**: (leave empty)
-   - **Build command**: `npm run build:netlify`
-   - **Publish directory**: `dist/public`
-   - **Node version**: 20
-
-5. **Deploy**
-   - Click "Deploy site"
-   - Netlify will build and deploy your site
-   - You'll get a random URL like `https://random-name-123456.netlify.app`
-
-6. **Custom domain (optional)**
-   - Go to Site settings → Domain management
-   - Add your custom domain
-   - Follow Netlify's DNS configuration instructions
+- This app uses a **fullstack architecture** (React frontend + Express backend)
+- Both Netlify and Vercel run Express as **serverless functions**, not traditional servers
+- Database connections require external PostgreSQL hosting (e.g., Neon, Supabase, Railway)
 
 ---
 
-### Option 2: Deploy via Netlify CLI
+## Option 1: Deploy to Netlify
 
-1. **Install Netlify CLI**
-   ```bash
-   npm install -g netlify-cli
-   ```
-
-2. **Login to Netlify**
-   ```bash
-   netlify login
-   ```
-
-3. **Initialize Netlify in your project**
-   ```bash
-   cd c:\Users\iamje\OneDrive\Desktop\anitgravity\configurator\Kirby-Clone
-   netlify init
-   ```
-
-4. **Follow the prompts**
-   - Create & configure a new site
-   - Choose your team
-   - Site name: `peb-configurator` (or your choice)
-   - Build command: `npm run build:netlify`
-   - Publish directory: `dist/public`
-
-5. **Deploy**
-   ```bash
-   netlify deploy --prod
-   ```
-
----
-
-## Configuration Files
-
-This repo includes the following Netlify configuration:
-
-### `netlify.toml`
-- Build command: `npm run build:netlify`
-- Publish directory: `dist/public`
-- Node version: 20
-- SPA redirect rules (all routes → index.html)
-- Security headers (XSS protection, frame options, etc.)
-- Cache headers for assets
-
-### `public/_redirects`
-- Fallback for client-side routing
-- Ensures all routes go to index.html
-
----
-
-## Environment Variables
-
-Since this app uses a PostgreSQL database in development, but you're deploying a **static frontend-only** version:
-
-### Important Note
-⚠️ **This deployment builds only the frontend (client-side).** The backend API and database are NOT included in Netlify's static hosting.
-
-**Options for backend:**
-1. **Mock Data**: Update the app to use mock/sample data instead of API calls
-2. **External API**: Deploy the backend separately (e.g., Railway, Render, Heroku) and update API endpoints
-3. **Serverless Functions**: Use Netlify Functions to create lightweight API endpoints
-
----
-
-## Testing the Build Locally
-
-Before deploying, test the production build:
+### Step 1: Install Required Package
 
 ```bash
-# Build the project
-npm run build:netlify
-
-# Preview the built files
-npx serve dist/public
+npm install serverless-http
 ```
 
-Open http://localhost:3000 to verify the build works correctly.
+### Step 2: Create Netlify Functions Directory
+
+Create the following file structure:
+
+```
+netlify/
+└── functions/
+    └── api.js
+```
+
+### Step 3: Create Serverless API Handler
+
+Create `netlify/functions/api.js`:
+
+```javascript
+const express = require('express');
+const serverless = require('serverless-http');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Import your routes (adjust paths as needed)
+// const { registerRoutes } = require('../../server/routes');
+// registerRoutes(app);
+
+// Example routes - replace with your actual API routes
+app.get('/.netlify/functions/api/templates', (req, res) => {
+  res.json([
+    { id: 1, type: 'single_slope', name: 'Single Slope' },
+    { id: 2, type: 'rigid_frame', name: 'Rigid Frame' },
+    { id: 3, type: 'lean_to', name: 'Building with Leans-to' }
+  ]);
+});
+
+app.post('/.netlify/functions/api/quotes', (req, res) => {
+  console.log('Quote received:', req.body);
+  res.json({ success: true, message: 'Quote submitted successfully' });
+});
+
+// Add more routes as needed...
+
+module.exports.handler = serverless(app);
+```
+
+### Step 4: Create netlify.toml
+
+Create `netlify.toml` in your project root:
+
+```toml
+[build]
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+
+### Step 5: Update Frontend API Calls
+
+Update API calls to use the `/api` prefix:
+
+```javascript
+// Before
+fetch('http://localhost:5000/api/templates')
+
+// After
+fetch('/api/templates')
+```
+
+### Step 6: Deploy
+
+**Via Netlify Dashboard:**
+1. Push code to GitHub
+2. Go to [app.netlify.com](https://app.netlify.com)
+3. Click "Add new site" > "Import from Git"
+4. Select your repository
+5. Verify settings:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+6. Add environment variables (DATABASE_URL, etc.)
+7. Click "Deploy"
+
+**Via CLI:**
+```bash
+npm install -g netlify-cli
+netlify login
+netlify init
+netlify deploy --prod
+```
+
+### Step 7: Add Environment Variables
+
+In Netlify Dashboard:
+1. Go to Site Settings > Environment Variables
+2. Add your variables:
+   - `DATABASE_URL` - Your PostgreSQL connection string
+   - `SESSION_SECRET` - Your session secret
 
 ---
 
-## Post-Deployment Checklist
+## Option 2: Deploy to Vercel
 
-- ✅ Site builds successfully
-- ✅ All routes work (click through the app)
-- ✅ 3D visualization loads correctly
-- ✅ Configuration panels are functional
-- ✅ No console errors in browser DevTools
-- ✅ Custom domain configured (if applicable)
-- ✅ HTTPS enabled (Netlify does this automatically)
+### Step 1: Create API Directory
+
+Create the following structure:
+
+```
+api/
+└── index.js
+```
+
+### Step 2: Create Serverless API Handler
+
+Create `api/index.js`:
+
+```javascript
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// All routes must start with /api
+app.get('/api', (req, res) => {
+  res.json({ message: 'PEB Configurator API' });
+});
+
+app.get('/api/templates', (req, res) => {
+  res.json([
+    { id: 1, type: 'single_slope', name: 'Single Slope' },
+    { id: 2, type: 'rigid_frame', name: 'Rigid Frame' },
+    { id: 3, type: 'lean_to', name: 'Building with Leans-to' }
+  ]);
+});
+
+app.post('/api/quotes', (req, res) => {
+  console.log('Quote received:', req.body);
+  res.json({ success: true, message: 'Quote submitted successfully' });
+});
+
+// Add more routes as needed...
+
+// Export for Vercel serverless
+module.exports = app;
+```
+
+### Step 3: Create vercel.json
+
+Create `vercel.json` in your project root:
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+### Step 4: Update package.json
+
+Add a build script if not present:
+
+```json
+{
+  "scripts": {
+    "build": "vite build",
+    "vercel-build": "npm run build"
+  }
+}
+```
+
+### Step 5: Update vite.config.ts for Local Development
+
+Add proxy configuration:
+
+```typescript
+export default defineConfig({
+  // ... existing config
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
+});
+```
+
+### Step 6: Deploy
+
+**Via Vercel Dashboard:**
+1. Push code to GitHub
+2. Go to [vercel.com/new](https://vercel.com/new)
+3. Import your repository
+4. Configure:
+   - Framework Preset: Vite
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+5. Add environment variables
+6. Click "Deploy"
+
+**Via CLI:**
+```bash
+npm install -g vercel
+vercel login
+vercel --prod
+```
+
+### Step 7: Add Environment Variables
+
+In Vercel Dashboard:
+1. Go to Project Settings > Environment Variables
+2. Add your variables:
+   - `DATABASE_URL` - Your PostgreSQL connection string
+   - `SESSION_SECRET` - Your session secret
+
+---
+
+## Database Hosting Options
+
+Since both Netlify and Vercel use serverless functions, you need an external PostgreSQL database:
+
+| Provider | Free Tier | Notes |
+|----------|-----------|-------|
+| [Neon](https://neon.tech) | 512 MB storage | Serverless, auto-scaling |
+| [Supabase](https://supabase.com) | 500 MB storage | Includes auth, storage |
+| [Railway](https://railway.app) | $5 credit/month | Easy setup |
+| [PlanetScale](https://planetscale.com) | 5 GB storage | MySQL only |
+| [ElephantSQL](https://elephantsql.com) | 20 MB storage | Basic PostgreSQL |
+
+---
+
+## Limitations
+
+### Netlify Functions
+- 10 second execution limit
+- 128 MB memory default
+- No WebSocket support
+- Stateless (no persistent connections)
+
+### Vercel Serverless
+- 10 second limit (Hobby) / 60 seconds (Pro)
+- 1024 MB memory default
+- Limited WebSocket support
+- Stateless
 
 ---
 
 ## Troubleshooting
 
-### Build fails with "Node version not found"
-- Ensure `netlify.toml` specifies `NODE_VERSION = "20"`
-- Or set it in Netlify UI: Site settings → Build & deploy → Environment → Environment variables
+### 404 on API Routes
+- Ensure routes start with `/api`
+- Check rewrite rules in config files
+- Verify function file location
 
-### 404 on page refresh
-- Verify `_redirects` file exists in `public/` folder
-- Check that `netlify.toml` has the redirect rules
+### CORS Errors
+- Add `cors()` middleware
+- Configure allowed origins for production
 
-### Assets not loading
-- Verify the publish directory is `dist/public`
-- Check that all asset paths are relative (not absolute `/assets/...`)
+### Database Connection Issues
+- Use connection pooling
+- Set `ssl: { rejectUnauthorized: false }` for hosted databases
+- Check environment variables are set
 
-### 3D models not rendering
-- Check browser console for WebGL errors
-- Ensure Three.js dependencies are in `dependencies` (not `devDependencies`)
-- Test in different browsers
-
----
-
-## Continuous Deployment
-
-Netlify automatically deploys when you push to your main branch:
-
-1. Make changes locally
-2. Commit and push to your repository
-3. Netlify detects the push and rebuilds automatically
-4. New version goes live in ~2-3 minutes
-
-### Branch Previews
-- Push to a feature branch
-- Netlify creates a preview URL
-- Review changes before merging to main
+### Build Failures
+- Check Node.js version compatibility
+- Verify all dependencies are in `dependencies` (not `devDependencies`)
+- Review build logs for specific errors
 
 ---
 
-## Resources
+## Quick Comparison
 
-- [Netlify Documentation](https://docs.netlify.com/)
-- [Netlify CLI Reference](https://cli.netlify.com/)
-- [Custom Domain Setup](https://docs.netlify.com/domains-https/custom-domains/)
-- [Environment Variables](https://docs.netlify.com/environment-variables/overview/)
+| Feature | Netlify | Vercel |
+|---------|---------|--------|
+| Free tier | Yes | Yes |
+| Serverless functions | Yes | Yes |
+| Edge functions | Yes | Yes |
+| WebSocket support | No | Limited |
+| Build minutes (free) | 300/month | 6000/month |
+| Bandwidth (free) | 100 GB | 100 GB |
 
----
-
-## Support
-
-If you encounter issues:
-1. Check the Netlify deploy logs in the UI
-2. Review browser console errors
-3. Test the build locally first
-4. Check [Netlify Community](https://answers.netlify.com/)
+Both platforms work great for this application. Choose based on your preference and existing infrastructure.

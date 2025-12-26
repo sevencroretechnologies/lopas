@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 export default function ConfiguratorPage() {
   const params = useParams<{ templateType: string }>();
   const [, setLocation] = useLocation();
-  const { buildingConfig, initializeBuilding, selectedTemplate } = useConfiguratorStore();
+  const { buildingConfig, addBuilding, initializeProject, project, selectedTemplate } = useConfiguratorStore();
 
   const templateType = params.templateType as TemplateType;
   const template = buildingTemplates.find(t => t.type === templateType);
@@ -20,12 +20,15 @@ export default function ConfiguratorPage() {
   useEffect(() => {
     if (templateType && !buildingConfig) {
       if (['single_slope', 'rigid_frame', 'leans_to'].includes(templateType)) {
-        initializeBuilding(templateType);
+        if (!project) {
+          initializeProject("New Project");
+        }
+        addBuilding(templateType);
       } else {
         setLocation('/');
       }
     }
-  }, [templateType, buildingConfig, initializeBuilding, setLocation]);
+  }, [templateType, buildingConfig, addBuilding, initializeProject, project, setLocation]);
 
   if (!template) {
     return (

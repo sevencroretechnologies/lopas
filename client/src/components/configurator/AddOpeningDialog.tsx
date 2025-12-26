@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useConfiguratorStore } from '@/lib/store';
-import { openingTypes, WallPosition, OpeningType, RAL_COLORS, generateId } from '@shared/schema';
+import { 
+  openingTypes, 
+  doorSwingDirections,
+  WallPosition, 
+  OpeningType, 
+  DoorSwingDirection,
+  RAL_COLORS, 
+  generateId 
+} from '@shared/schema';
 import { DoorOpen, Grid2x2 } from 'lucide-react';
 
 interface AddOpeningDialogProps {
@@ -16,10 +25,14 @@ interface AddOpeningDialogProps {
 
 const openingTypeLabels: Record<OpeningType, string> = {
   window: 'Window',
-  door: 'Personnel Door',
+  door: 'Swing Door',
   sliding_door: 'Sliding Door',
   roll_door: 'Roll-Up Door',
   sectional_door: 'Sectional Door',
+  personnel_door: 'Personnel Door',
+  emergency_exit: 'Emergency Exit',
+  louver: 'Louver',
+  framed_opening: 'Framed Opening',
 };
 
 const openingTypeDefaults: Record<OpeningType, { width: number; height: number }> = {
@@ -28,6 +41,17 @@ const openingTypeDefaults: Record<OpeningType, { width: number; height: number }
   sliding_door: { width: 3.0, height: 2.5 },
   roll_door: { width: 4.0, height: 4.0 },
   sectional_door: { width: 5.0, height: 4.5 },
+  personnel_door: { width: 0.9, height: 2.1 },
+  emergency_exit: { width: 1.8, height: 2.1 },
+  louver: { width: 0.6, height: 0.6 },
+  framed_opening: { width: 3.0, height: 3.0 },
+};
+
+const swingDirectionLabels: Record<DoorSwingDirection, string> = {
+  left_in: 'Left - Inward',
+  left_out: 'Left - Outward',
+  right_in: 'Right - Inward',
+  right_out: 'Right - Outward',
 };
 
 export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogProps) {
@@ -38,16 +62,25 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
   const [offsetX, setOffsetX] = useState(0);
   const [elevation, setElevation] = useState(0);
   const [color, setColor] = useState('RAL 9010');
+  const [swingDirection, setSwingDirection] = useState<DoorSwingDirection>('left_in');
+  const [hasFrame, setHasFrame] = useState(true);
+  const [frameColor, setFrameColor] = useState('RAL 7016');
+
+  const isDoor = ['door', 'personnel_door', 'emergency_exit'].includes(type);
+  const needsSwingDirection = isDoor;
 
   const handleTypeChange = (newType: OpeningType) => {
     setType(newType);
     const defaults = openingTypeDefaults[newType];
     setWidth(defaults.width);
     setHeight(defaults.height);
-    if (newType === 'window') {
+    if (newType === 'window' || newType === 'louver') {
       setElevation(1.2);
     } else {
       setElevation(0);
+    }
+    if (['door', 'personnel_door', 'emergency_exit'].includes(newType)) {
+      setHasFrame(true);
     }
   };
 
@@ -61,6 +94,9 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
       position: { x: offsetX, y: elevation },
       dimensions: { width, height },
       color,
+      ...(needsSwingDirection && { swingDirection }),
+      hasFrame,
+      ...(hasFrame && { frameColor }),
     };
 
     addOpening(opening);
@@ -72,6 +108,9 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
     setOffsetX(0);
     setElevation(0);
     setColor('RAL 9010');
+    setSwingDirection('left_in');
+    setHasFrame(true);
+    setFrameColor('RAL 7016');
   };
 
   const wallLabels: Record<WallPosition, string> = {
@@ -84,12 +123,15 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]" data-testid="dialog-add-opening">
+      <DialogContent className="sm:max-w-[480px]" data-testid="dialog-add-opening">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DoorOpen className="h-5 w-5 text-[#F7941D]" />
             Add Opening - {wallLabels[wall]}
           </DialogTitle>
+          <DialogDescription>
+            Configure the opening type, dimensions, and position.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -117,7 +159,7 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
                 type="number"
                 step="0.1"
                 min="0.5"
-                max="10"
+                max="15"
                 value={width}
                 onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
                 data-testid="input-opening-width"
@@ -164,8 +206,36 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
             </div>
           </div>
 
+          {needsSwingDirection && (
+            <div className="grid gap-2">
+              <Label htmlFor="swing-direction">Door Swing Direction</Label>
+              <Select value={swingDirection} onValueChange={(v) => setSwingDirection(v as DoorSwingDirection)}>
+                <SelectTrigger id="swing-direction" data-testid="select-swing-direction">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {doorSwingDirections.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {swingDirectionLabels[d]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="has-frame">Include Frame</Label>
+            <Switch
+              id="has-frame"
+              checked={hasFrame}
+              onCheckedChange={setHasFrame}
+              data-testid="switch-has-frame"
+            />
+          </div>
+
           <div className="grid gap-2">
-            <Label>Color</Label>
+            <Label>Opening Color</Label>
             <div className="grid grid-cols-5 gap-2">
               {RAL_COLORS.slice(0, 10).map((c) => {
                 const isSelected = color === c.code;
@@ -185,6 +255,30 @@ export function AddOpeningDialog({ open, onOpenChange, wall }: AddOpeningDialogP
               })}
             </div>
           </div>
+
+          {hasFrame && (
+            <div className="grid gap-2">
+              <Label>Frame Color</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {RAL_COLORS.slice(0, 10).map((c) => {
+                  const isSelected = frameColor === c.code;
+                  return (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => setFrameColor(c.code)}
+                      className={`w-full aspect-square rounded-md border-2 transition-all ${
+                        isSelected ? 'border-[#F7941D] ring-2 ring-[#F7941D]/30' : 'border-transparent hover:border-muted-foreground/50'
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name}
+                      data-testid={`frame-color-option-${c.code.replace(/\s+/g, '-')}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

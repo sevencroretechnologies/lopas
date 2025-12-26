@@ -16,11 +16,14 @@ const templateImages: Record<TemplateType, string> = {
 };
 
 export default function TemplatesPage() {
-  const { setSelectedTemplate, initializeBuilding } = useConfiguratorStore();
+  const { setSelectedTemplate, addBuilding, initializeProject, project } = useConfiguratorStore();
 
   const handleSelectTemplate = (templateType: TemplateType) => {
     setSelectedTemplate(templateType);
-    initializeBuilding(templateType);
+    if (!project) {
+      initializeProject("New Project");
+    }
+    addBuilding(templateType);
   };
 
   return (
