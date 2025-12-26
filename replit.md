@@ -125,3 +125,15 @@ The core data model includes:
 - Lean-to, mezzanine, canopy, skylight, ventilator CRUD
 - Crane configuration
 - Multi-building operations
+
+### Visual Insert Dialog (Dec 2024)
+- InsertDialog component (`components/configurator/InsertDialog.tsx`) with visual icon tiles
+- Categories: General Objects, Lighting & Ventilation, Equipment, Storage, Decorations, Structural
+- BuildingExtensionsDialog for lean-to presets (left, right, dual)
+- Orange "Insert" button in TopControlBar with Kirby branding
+
+### 3D Visualization Enhancements (Dec 2024)
+- Semi-transparent materials with edge highlighting when showEdges is enabled
+- DimensionAnnotations component showing width, length, height, and peak dimensions
+- Kirby orange (#F7941D) branded dimension labels
+- Dimension annotations toggled via visualization.showDimensions flag
