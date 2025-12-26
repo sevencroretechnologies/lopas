@@ -307,6 +307,125 @@ function SkylightRenderer({ skylight, roofHeight }: SkylightRenderProps) {
   );
 }
 
+function DimensionAnnotations() {
+  const { buildingConfig, visualization } = useConfiguratorStore();
+  
+  if (!buildingConfig || !visualization.showDimensions) return null;
+  
+  const { dimensions, roof } = buildingConfig;
+  const width = dimensions.width;
+  const length = dimensions.length;
+  const height = dimensions.eaveHeight;
+  const slopeAngle = parseSlopeToAngle(roof.slope);
+  const peakHeight = roof.type === 'double_slope' 
+    ? height + (width / 2) * Math.tan(slopeAngle)
+    : height + width * Math.tan(slopeAngle);
+  
+  const annotationColor = '#F7941D';
+  
+  return (
+    <group>
+      {/* Width dimension - front of building */}
+      <group position={[0, 0.2, length / 2 + 2]}>
+        {/* Extension lines */}
+        <mesh position={[-width / 2, 0, 0]}>
+          <boxGeometry args={[0.05, 0.05, 1.5]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        <mesh position={[width / 2, 0, 0]}>
+          <boxGeometry args={[0.05, 0.05, 1.5]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        {/* Dimension line */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[width, 0.05, 0.05]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        {/* Label */}
+        <Html position={[0, 0, 0.5]} center>
+          <div className="bg-[#F7941D] text-white px-2 py-0.5 rounded text-xs font-mono whitespace-nowrap shadow-md">
+            {width.toFixed(1)}m
+          </div>
+        </Html>
+      </group>
+
+      {/* Length dimension - right side */}
+      <group position={[width / 2 + 2, 0.2, 0]}>
+        {/* Extension lines */}
+        <mesh position={[0, 0, -length / 2]}>
+          <boxGeometry args={[1.5, 0.05, 0.05]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        <mesh position={[0, 0, length / 2]}>
+          <boxGeometry args={[1.5, 0.05, 0.05]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        {/* Dimension line */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[0.05, 0.05, length]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        {/* Label */}
+        <Html position={[0.5, 0, 0]} center>
+          <div className="bg-[#F7941D] text-white px-2 py-0.5 rounded text-xs font-mono whitespace-nowrap shadow-md">
+            {length.toFixed(1)}m
+          </div>
+        </Html>
+      </group>
+
+      {/* Height dimension - front left corner */}
+      <group position={[-width / 2 - 1.5, height / 2, length / 2]}>
+        {/* Extension lines */}
+        <mesh position={[0, -height / 2, 0]}>
+          <boxGeometry args={[1, 0.05, 0.05]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        <mesh position={[0, height / 2, 0]}>
+          <boxGeometry args={[1, 0.05, 0.05]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        {/* Dimension line */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[0.05, height, 0.05]} />
+          <meshBasicMaterial color={annotationColor} />
+        </mesh>
+        {/* Label */}
+        <Html position={[-0.5, 0, 0]} center>
+          <div className="bg-[#F7941D] text-white px-2 py-0.5 rounded text-xs font-mono whitespace-nowrap shadow-md">
+            {height.toFixed(1)}m
+          </div>
+        </Html>
+      </group>
+
+      {/* Peak height dimension - for pitched roofs */}
+      {roof.type === 'double_slope' && (
+        <group position={[width / 2 + 1.5, peakHeight / 2, -length / 2]}>
+          {/* Extension lines */}
+          <mesh position={[0, -peakHeight / 2, 0]}>
+            <boxGeometry args={[1, 0.05, 0.05]} />
+            <meshBasicMaterial color={annotationColor} />
+          </mesh>
+          <mesh position={[0, peakHeight / 2, 0]}>
+            <boxGeometry args={[1, 0.05, 0.05]} />
+            <meshBasicMaterial color={annotationColor} />
+          </mesh>
+          {/* Dimension line */}
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[0.05, peakHeight, 0.05]} />
+            <meshBasicMaterial color={annotationColor} />
+          </mesh>
+          {/* Label */}
+          <Html position={[0.5, 0, 0]} center>
+            <div className="bg-[#F7941D] text-white px-2 py-0.5 rounded text-xs font-mono whitespace-nowrap shadow-md">
+              {peakHeight.toFixed(1)}m (peak)
+            </div>
+          </Html>
+        </group>
+      )}
+    </group>
+  );
+}
+
 interface BuildingProps {
   onAddOpening?: (wall: WallPosition) => void;
 }
@@ -922,6 +1041,9 @@ export function Viewport3D() {
 
         {/* Building Model */}
         <Building onAddOpening={handleAddOpening} />
+
+        {/* Dimension Annotations */}
+        <DimensionAnnotations />
 
         {/* Contact Shadows */}
         <ContactShadows
